@@ -180,10 +180,6 @@ users_feb_2020 = combined_df[combined_df['year_month'] == '2020-02']['user_id'].
 users_mar_2020 = combined_df[combined_df['year_month'] == '2020-03']['user_id'].unique().tolist()
 all_users = combined_df['user_id'].unique().tolist()
 
-# user_count_jan = len(users_jan_2020)
-# user_count_feb = len(users_feb_2020)
-# user_count_mar = len(users_mar_2020)
-
 ################################################################################################################################################
 #### Step 2: Work out customers that are new/missing from either monthly list ##################################################################
 ################################################################################################################################################
@@ -196,11 +192,9 @@ Similarly for clients churned in March - they would be present in the Feb client
 churned_feb = list(set(users_jan_2020) - set(users_feb_2020))
 churned_mar = list(set(users_feb_2020) - set(users_mar_2020))
 
-
 #### New Clients would be present in the current month but not in ANY of the preceeding months###############################################
 new_feb = list(set(users_feb_2020) - set(users_jan_2020))
 new_mar = list(set(users_mar_2020) - set(users_feb_2020) - set(users_jan_2020))
-
 
 #### Reactivated Customers were those clients that appeared in the March Client list AND in the CHURNED Febuary customer list################
 reactivated_mar = list(set(users_mar_2020) & set(churned_feb))
@@ -337,6 +331,10 @@ The updated_df was then used as the foundational dataframe and basis from which 
 to aggregate and group data into year-month, client status, market-pairs etc... to produce visualizations and obtain insights into customer 
 behaviour. 
 '''
+
+#############
+# final dataframe for submission
+final_df = updated_df[['timestamp_at', 'year_month', 'user_id', 'status', 'market_pair', 'usd_volume']]
 
 ############################################################################################################################################
 #### Streamlit Sidebar widgets #############################################################################################################
@@ -483,8 +481,9 @@ statusAverage = singleClient_average['avg_monthlyStatus_volume'].iloc[-1]
 monthlyAverage = singleClient_average['avg_monthly_volume'].iloc[-1]
 
 
-# Dataframe 3 filtered on a specific month for all clients
+# Dataframe 3 filtered on a specific month AND then status for all clients
 allClients_monthlyAverage = clients_combined_avg[clients_combined_avg['year_month'] == singleMonth]
+allClients_monthlyAverage = allClients_monthlyAverage[allClients_monthlyAverage['status'] == 'Returning']
 
 # Calculate Number of clients that traded below the monthly average
 monthlyMean_value = allClients_monthlyAverage['avg_monthlyStatus_volume'].mean()
@@ -509,9 +508,69 @@ with the data using the end and be better able to draw insights from it.
 #### Import Luno Logo and Display in Front-end along with App Heading
 colA,colB = st.columns([1,8])
 colA.image(banner, width=100)
-colB.markdown("<h2 style='text-align: left; padding-left: 0px; font-size: 60px'><b>Luno Customer Analysis<b></h2>", unsafe_allow_html=True)
+colB.markdown("<h1 style='text-align: left; padding-left: 0px; font-size: 60px'><b>Luno Customer Analysis<b></h1>", unsafe_allow_html=True)
 
 
+#### Summary of Business Questions Answers
+markdown_content = """
+
+## 1. Customer Status Distribution
+
+My Analysis showed that the number of UNIQUE clients trading for each of the months Jan, Feb and March 
+on exchange / broker were 15, 17 and 18 respectively. The 15 clients for Jan were all considered to be 
+returning clients (this was the first month's data we had and so could not determine if they belonged to 
+any of the other segments. Using this as our starting point, our analysis revealed the followed client status
+ distribution for each of the months considered:
+
+### Jan-2020 Clients (15 Active Customers)
+- 15 Returning
+
+### Feb 2020 Clients (17 Active Customers)
+- 13 returning
+- 2 Churned
+- 4 New
+
+### March 2020 Clients (18 Active Customers)
+- 14 returning
+- 3 Churned
+- 2 New
+- 2 Reactivated
+
+## 2. Churn Rate for February and March
+
+- **Feb Churn Rate** was calculated as **11.76%** (2 churned / 17 active)
+- **March Churn Rate** was calculated as **16.67%** (3 churned / 18 active)
+
+## 3. Customer Transacting Segment Trends
+
+Our analysis revealed that for new customers the preferred market-pair was XBT/MYR. 
+As will be shown below, just over usd 11k of this pair were bought by new clients over Feb and March. 
+This was somewhat surprising given that the XBT/ZAR market-pair was by far the most traded currency 
+(over $1,9m traded) over the three months investigated. It was still the most popular pair for returning 
+clients but not for new clients who preferred XBT/MYR – this would suggest that we had more new clients
+from Malaysia than South Africa.
+
+## 4. Average Trade Volume by Transacting Segment
+
+Our findings show that for returning customers only, the average volume traded for each of the months 
+were $926, $242 and $530 for Jan, Feb and March respectively. On average about 70 percent of returning customers 
+traded below this average each month – indicating that there were some customers (about 30 percent) that traded significantly higher than the mean monthly average.
+
+We also note the drop in average USD volume traded for returning customers in Feb (usd 242) compared to Jan (usd 926) and March (usd 530). I would say that once reason for 
+this could be the price of XBT/ZAR in Feb. Bitcoin rallied hard in Jan, which would have contributed to the higher volume seen for this month. However, 
+in February the Bitcoin Price seem to stagnate and sometime during that month began to decline with the trend continuing down in March.
+
+Returning customers would have done most of their purchasing in Jan during the bull run and would appear to have stood back in Feb particularly,
+they re-entered again in March when prices were at more attractive levels to buy.
+
+"""
+
+#### Display the content in expander
+with st.expander("📊 Summary of Business Analysis Questions", expanded=True):
+    st.markdown("<h1 style='text-align: left; padding-left: 0px; font-size: 40px'><b>Summary of Business Question Answers<b></h1>", unsafe_allow_html=True)
+    st.download_button("Download Final Dataframe",convert_df(final_df),"final_clean_df.csv", "text/csv",key='final_clean_df-csv')
+    st.markdown(markdown_content)
+    
 #################################################################################################################################################################
 #### Graphs 1 displays the Hourly Trade Distribution Per Month in Count and Percentage ##########################################################################
 #### Graphs 2 displays the Hourly USD Volume Distribution Per Month in Count and Percentage #####################################################################
@@ -657,8 +716,8 @@ if showSingleClientComp:
       col11.dataframe(singleClient_average)
       col11.download_button("Download",convert_df(singleClient_average),"single_client_comp.csv", "text/csv",key='single_client_comp-csv')
 
-col12.plotly_chart(monthlyClientVolumeNormalised(allClients_monthlyAverage, title='Graph 12 - Distribution of Monthly Average USD Volume Traded By Status'))
-col12.write(f"💡 **{clientsBelow_mean_count}** out of **{total_count}** trades ({percentage_below_mean:.2f}%) are below the mean (${monthlyMean_value:,.2f})")
+col12.plotly_chart(monthlyClientVolumeNormalised(allClients_monthlyAverage, title='Graph 12 - Distribution of Monthly Average USD Volume Traded By Returning Clients'))
+col12.write(f"💡 **{clientsBelow_mean_count}** out of **{total_count}** clients ({percentage_below_mean:.2f}%) are below the mean (${monthlyMean_value:,.2f})")
 showAllClientComp= col12.toggle('Show Monthly Status Avg Comparison')
 if showAllClientComp:
       col12.markdown("<h2 style='text-align: left; color: black; padding-left: 0px; font-size: 20px'><b>Monthly Status Avg Comparison<b></h2>", unsafe_allow_html=True)
