@@ -1,6 +1,7 @@
 plotly
 pandas
 numpy
+scipy
 streamlit
 streamlit_lottie
 
